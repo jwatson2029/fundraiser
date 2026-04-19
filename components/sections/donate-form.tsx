@@ -9,7 +9,6 @@ import { Label } from "@/components/ui/label";
 export function DonateForm() {
   const [amount, setAmount] = useState<number>(DONATION_PRESETS[2]);
   const [customAmount, setCustomAmount] = useState("");
-  const [recurringMonthly, setRecurringMonthly] = useState(false);
   const [donorName, setDonorName] = useState("");
   const [schoolAffiliation, setSchoolAffiliation] = useState("");
   const [donorMessage, setDonorMessage] = useState("");
@@ -28,7 +27,7 @@ export function DonateForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           amount: resolvedAmount,
-          recurringMonthly,
+          recurringMonthly: false,
           donorName,
           schoolAffiliation,
           donorMessage,
@@ -111,15 +110,6 @@ export function DonateForm() {
       </div>
 
       <div className="mt-4 space-y-2 text-sm">
-        <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            checked={recurringMonthly}
-            onChange={(e) => setRecurringMonthly(e.target.checked)}
-            className="h-4 w-4"
-          />
-          Make this a monthly donation
-        </label>
         <label className="flex items-center gap-2">
           <input
             type="checkbox"
