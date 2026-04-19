@@ -22,7 +22,7 @@ No donor designation by school is allowed.
 - Next.js 15 (App Router) + TypeScript
 - Tailwind CSS
 - Stripe Checkout Sessions + Webhook verification
-- Prisma + SQLite (swap to Postgres/Supabase by changing Prisma datasource)
+- Prisma + Supabase Postgres
 - Vercel Analytics
 
 ## Local Setup
@@ -39,14 +39,19 @@ npm install
 cp .env.example .env
 ```
 
-3. Create database and Prisma client:
+3. Add your Supabase Postgres URLs in `.env`:
+
+- `DATABASE_URL`: Supabase transaction pooler URL (port `6543`)
+- `DIRECT_URL`: Supabase direct URL (port `5432`)
+
+4. Create database schema and Prisma client:
 
 ```bash
 npm run prisma:generate
 npm run prisma:push
 ```
 
-4. Run locally:
+5. Run locally:
 
 ```bash
 npm run dev
@@ -61,6 +66,7 @@ npm run dev
 - `STRIPE_WEBHOOK_SECRET`
 - `NEXT_PUBLIC_SITE_URL`
 - `DATABASE_URL`
+- `DIRECT_URL`
 
 ### Test Mode and Live Mode
 
@@ -90,15 +96,30 @@ Then copy the emitted webhook signing secret into `STRIPE_WEBHOOK_SECRET`.
 
 1. Push project to GitHub.
 2. Import into Vercel.
-3. Add environment variables from `.env.example` in Vercel project settings.
+3. Add environment variables from `.env.example` in Vercel project settings (including Supabase `DATABASE_URL` and `DIRECT_URL`).
 4. Build command remains default (`next build`).
 5. Set custom domain `fundraiser.forsythk12.tech` in Vercel domains.
 6. Update DNS to point to Vercel.
 7. In Stripe, update success/cancel URLs and webhook endpoint to production domain.
+
+## Supabase Quick Setup
+
+1. Create a new Supabase project.
+2. In Supabase, open **Project Settings → Database → Connection string**.
+3. Copy:
+   - **Transaction pooler** URL into `DATABASE_URL`
+   - **Direct connection** URL into `DIRECT_URL`
+4. Run:
+
+```bash
+npm run prisma:push
+```
+
+This creates the `Donation` table used by `/api/stats` and webhook processing.
 
 ## Notes for Production Hardening
 
 - Replace logo placeholder in `public/images/forsyth-logo-placeholder.svg` with official district branding.
 - Replace placeholder photos/testimonials with district-approved media and copy.
 - Add formal tax/compliance language once legal text is provided.
-- Move from SQLite to managed Postgres for high-traffic production workloads.
+- Verify Stripe webhook events arrive in production by checking Supabase rows in the `Donation` table.
