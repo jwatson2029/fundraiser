@@ -1,0 +1,23 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Donation {
+  id                 Int      @id @default(autoincrement())
+  stripeSessionId    String   @unique
+  stripePaymentId    String?
+  amountCents        Int
+  currency           String   @default("usd")
+  donorName          String?
+  schoolAffiliation  String?
+  donorMessage       String?
+  donorEmail         String?
+  isRecurringMonthly Boolean  @default(false)
+  showOnWall         Boolean  @default(false)
+  createdAt          DateTime @default(now())
+}
