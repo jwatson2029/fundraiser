@@ -15,11 +15,13 @@ export function DonateForm() {
   const [donorMessage, setDonorMessage] = useState("");
   const [showOnWall, setShowOnWall] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const resolvedAmount = customAmount ? Number(customAmount) : amount;
 
   async function handleSubmit() {
     setLoading(true);
+    setError("");
     try {
       const res = await fetch("/api/create-checkout-session", {
         method: "POST",
@@ -33,9 +35,18 @@ export function DonateForm() {
           showOnWall
         })
       });
-      const data = (await res.json()) as { url?: string; error?: string };
+
+      let data: { url?: string; error?: string } = {};
+      try {
+        data = (await res.json()) as { url?: string; error?: string };
+      } catch {
+        data = { error: "Unexpected server response. Please try again." };
+      }
+
       if (!res.ok || !data.url) throw new Error(data.error || "Unable to create checkout session");
       window.location.href = data.url;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to create checkout session");
     } finally {
       setLoading(false);
     }
@@ -123,6 +134,7 @@ export function DonateForm() {
       <Button className="mt-6 w-full" size="lg" onClick={handleSubmit} disabled={loading || resolvedAmount < 5}>
         {loading ? "Redirecting to secure checkout..." : "Donate Securely with Stripe"}
       </Button>
+      {error ? <p className="mt-3 text-sm text-red-600">{error}</p> : null}
     </section>
   );
 }

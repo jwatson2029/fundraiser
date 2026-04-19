@@ -14,49 +14,61 @@ const bodySchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-  const forwarded = request.headers.get("x-forwarded-for") ?? "local";
-  if (!allowRequest(forwarded)) {
-    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
-  }
-
-  const parsed = bodySchema.safeParse(await request.json());
-  if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
-  }
-
-  const { amount, recurringMonthly, donorName, schoolAffiliation, donorMessage, showOnWall } = parsed.data;
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL!;
-
-  const session = await stripe.checkout.sessions.create({
-    mode: recurringMonthly ? "subscription" : "payment",
-    success_url: `${siteUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${siteUrl}/?donationCanceled=true`,
-    customer_creation: "always",
-    line_items: [
-      {
-        price_data: {
-          currency: "usd",
-          product_data: {
-            name: "Forsyth County Schools Sports & Clubs Fundraiser",
-            description: "100% split equally among all 8 Forsyth County high schools"
-          },
-          unit_amount: amount * 100,
-          recurring: recurringMonthly ? { interval: "month" } : undefined
-        },
-        quantity: 1
-      }
-    ],
-    metadata: {
-      donorName: donorName || "",
-      schoolAffiliation: schoolAffiliation || "",
-      donorMessage: donorMessage || "",
-      showOnWall: String(showOnWall),
-      recurringMonthly: String(recurringMonthly)
-    },
-    custom_text: {
-      submit: { message: "Your donation will be split equally among all 8 Forsyth County high schools." }
+  try {
+    const forwarded = request.headers.get("x-forwarded-for") ?? "local";
+    if (!allowRequest(forwarded)) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
     }
-  });
 
-  return NextResponse.json({ url: session.url });
+    const parsed = bodySchema.safeParse(await request.json());
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+    }
+
+    if (!process.env.STRIPE_SECRET_KEY) {
+      return NextResponse.json({ error: "Stripe secret key is missing on server" }, { status: 500 });
+    }
+
+    const { amount, recurringMonthly, donorName, schoolAffiliation, donorMessage, showOnWall } = parsed.data;
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+    if (!siteUrl) {
+      return NextResponse.json({ error: "NEXT_PUBLIC_SITE_URL is missing on server" }, { status: 500 });
+    }
+
+    const session = await stripe.checkout.sessions.create({
+      mode: recurringMonthly ? "subscription" : "payment",
+      success_url: `${siteUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${siteUrl}/?donationCanceled=true`,
+      customer_creation: "always",
+      line_items: [
+        {
+          price_data: {
+            currency: "usd",
+            product_data: {
+              name: "Forsyth County Schools Sports & Clubs Fundraiser",
+              description: "100% split equally among all 8 Forsyth County high schools"
+            },
+            unit_amount: amount * 100,
+            recurring: recurringMonthly ? { interval: "month" } : undefined
+          },
+          quantity: 1
+        }
+      ],
+      metadata: {
+        donorName: donorName || "",
+        schoolAffiliation: schoolAffiliation || "",
+        donorMessage: donorMessage || "",
+        showOnWall: String(showOnWall),
+        recurringMonthly: String(recurringMonthly)
+      },
+      custom_text: {
+        submit: { message: "Your donation will be split equally among all 8 Forsyth County high schools." }
+      }
+    });
+
+    return NextResponse.json({ url: session.url });
+  } catch (error) {
+    console.error("Failed to create Stripe checkout session:", error);
+    return NextResponse.json({ error: "Unable to start checkout. Please try again." }, { status: 500 });
+  }
 }

@@ -19,10 +19,14 @@ export function LiveImpact() {
   useEffect(() => {
     let mounted = true;
     const load = async () => {
-      const res = await fetch("/api/stats", { cache: "no-store" });
-      if (!res.ok) return;
-      const data = (await res.json()) as Stats;
-      if (mounted) setStats(data);
+      try {
+        const res = await fetch("/api/stats", { cache: "no-store" });
+        if (!res.ok) return;
+        const data = (await res.json()) as Stats;
+        if (mounted) setStats(data);
+      } catch {
+        // Keep current stats on transient network/API failures.
+      }
     };
     void load();
     const interval = setInterval(() => void load(), 20_000);
